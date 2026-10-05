@@ -1,0 +1,56 @@
+-- guide
+-- first execute script
+-- put everything you want duped into vault
+-- leave game
+-- duped items
+
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local TEST_VALUES = {
+	0,
+	1,
+	-1,
+	999999999,
+	-999999999,
+	1e100,
+	-1e100,
+	math.huge,
+	"TEST",
+	"",
+	string.rep("A", 1000),
+	true,
+	false,
+	{},
+}
+
+local function fireRemote(remote)
+	for _, value in ipairs(TEST_VALUES) do
+		if remote:IsA("RemoteEvent") then
+			local success, err = pcall(function()
+				remote:FireServer(value)
+			end)
+
+			if not success then
+				warn("[RemoteEvent ERROR]", remote:GetFullName(), err)
+			end
+
+		elseif remote:IsA("RemoteFunction") then
+			local success, result = pcall(function()
+				return remote:InvokeServer(value)
+			end)
+
+			if not success then
+				warn("[RemoteFunction ERROR]", remote:GetFullName(), result)
+			end
+		end
+
+		task.wait(0.05)
+	end
+end
+
+for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+	if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+		task.spawn(fireRemote, obj)
+	end
+end
