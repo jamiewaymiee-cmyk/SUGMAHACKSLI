@@ -1,56 +1,166 @@
--- guide
--- first execute script
--- put everything you want duped into vault
--- leave game
--- duped items
-
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local TEST_VALUES = {
-	0,
-	1,
-	-1,
-	999999999,
-	-999999999,
-	1e100,
-	-1e100,
-	math.huge,
-	"TEST",
-	"",
-	string.rep("A", 1000),
-	true,
-	false,
-	{},
-}
-
-local function fireRemote(remote)
-	for _, value in ipairs(TEST_VALUES) do
-		if remote:IsA("RemoteEvent") then
-			local success, err = pcall(function()
-				remote:FireServer(value)
-			end)
-
-			if not success then
-				warn("[RemoteEvent ERROR]", remote:GetFullName(), err)
-			end
-
-		elseif remote:IsA("RemoteFunction") then
-			local success, result = pcall(function()
-				return remote:InvokeServer(value)
-			end)
-
-			if not success then
-				warn("[RemoteFunction ERROR]", remote:GetFullName(), result)
-			end
+local Library={Flags={},Elements={},Theme={Accent=Color3.fromRGB(80,120,255),Background=Color3.fromRGB(15,15,20),Text=Color3.fromRGB(255,255,255),Secondary=Color3.fromRGB(45,45,50)},ToggleKey=Enum.KeyCode.RightShift,Opened=true,Notifications=nil}
+local UserInputService,HttpService,TweenService,Players=game:GetService("UserInputService"),game:GetService("HttpService"),game:GetService("TweenService"),game:GetService("Players")
+local player=Players.LocalPlayer
+local function applyGlassEffect(g,r,t,st)
+	g.BackgroundColor3=Library.Theme.Background;g.BackgroundTransparency=t or 0.4;g.BorderSizePixel=0
+	local c=Instance.new("UICorner");c.CornerRadius=UDim.new(0,r or 8);c.Parent=g
+	if st then local s=Instance.new("UIStroke");s.Color=Color3.fromRGB(255,255,255);s.Transparency=st;s.Thickness=1;s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border;s.Parent=g end
+end
+function Library:Update(tf)
+	local function ref(f)
+		local d=self.Elements[f]
+		if not d then return end
+		if d.Type=="Toggle" then d.Indicator.BackgroundColor3=self.Flags[f] and self.Theme.Accent or self.Theme.Secondary
+		elseif d.Type=="Dropdown" then d.Button.Text=" "..d.Title.." : "..tostring(self.Flags[f])
+		elseif d.Type=="Keybind" then d.Label.Text=tostring(self.Flags[f])
+		elseif d.Type=="TextBox" then d.Box.Text=tostring(self.Flags[f])
+		elseif d.Type=="Slider" then local p=math.clamp((self.Flags[f]-d.Min)/(d.Max-d.Min),0,1);d.Fill.Size=UDim2.new(p,0,1,0);d.ValLabel.Text=tostring(self.Flags[f]) end
+	end
+	if tf then ref(tf) else for f,_ in pairs(self.Elements) do ref(f) end end
+end
+function Library:Notify(t,c,d)
+	if not self.Notifications then
+		local n=Instance.new("ScreenGui");n.Name="LiquidNotifications";n.DisplayOrder=50000;n.Parent=player:WaitForChild("PlayerGui")
+		local h=Instance.new("Frame");h.Size=UDim2.new(0,300,1,-20);h.Position=UDim2.new(1,-310,0,10);h.BackgroundTransparency=1;h.Parent=n
+		local l=Instance.new("UIListLayout");l.VerticalAlignment=Enum.VerticalAlignment.Bottom;l.Padding=UDim.new(0,10);l.Parent=h;self.Notifications=h
+	end
+	local no=Instance.new("Frame");no.Size=UDim2.new(1,0,0,80);no.ClipsDescendants=true;applyGlassEffect(no,8,0.2,0.7);no.Parent=self.Notifications
+	local tl=Instance.new("TextLabel");tl.Size=UDim2.new(1,-10,0,25);tl.Position=UDim2.new(0,10,0,5);tl.Text=t;tl.Font=Enum.Font.GothamBold;tl.TextColor3=Library.Theme.Accent;tl.TextSize=14;tl.TextXAlignment=Enum.TextXAlignment.Left;tl.BackgroundTransparency=1;tl.Parent=no
+	local bl=Instance.new("TextLabel");bl.Size=UDim2.new(1,-20,0,45);bl.Position=UDim2.new(0,10,0,25);bl.Text=c;bl.Font=Enum.Font.Gotham;bl.TextColor3=Library.Theme.Text;bl.TextSize=13;bl.TextWrapped=true;bl.TextXAlignment=Enum.TextXAlignment.Left;bl.BackgroundTransparency=1;bl.Parent=no
+	task.delay(d or 5,function() TweenService:Create(no,TweenInfo.new(0.5),{BackgroundTransparency=1}):Play();TweenService:Create(tl,TweenInfo.new(0.5),{TextTransparency=1}):Play();TweenService:Create(bl,TweenInfo.new(0.5),{TextTransparency=1}):Play();task.wait(0.5);no:Destroy() end)
+end
+function Library:UIDelete()
+	if self.ScreenGui then self.ScreenGui:Destroy();self.ScreenGui=nil end
+	if self.Notifications then if self.Notifications.Parent then self.Notifications.Parent:Destroy() end;self.Notifications=nil end
+end
+function Library:SaveConfig(name)
+	local n=(name or self.Flags["ConfigName"] or "config")..".json"
+	if writefile then writefile(n,HttpService:JSONEncode(self.Flags));self:Notify("Config","Saved to "..n,3) else self:Notify("Error","Your executor does not support writefile.",3) end
+end
+function Library:LoadConfig(name)
+	local n=(name or self.Flags["ConfigName"] or "config")..".json"
+	if isfile and isfile(n) then
+		local s,r=pcall(function() return HttpService:JSONDecode(readfile(n)) end)
+		if s and type(r)=="table" then for k,v in pairs(r) do self.Flags[k]=v end;self:Update();self:Notify("Config","Successfully loaded "..n,3)
+		else self:Notify("Error","Failed to parse config file.",3) end
+	else self:Notify("Error","File not found!",3) end
+end
+function Library:CreateWindow(cfg)
+	local title,settingsEnabled
+	if type(cfg)=="table" then title=cfg.Title or "Liquid Library";settingsEnabled=(cfg.Settings==nil) and true or cfg.Settings
+	else title=cfg or "Liquid Library";settingsEnabled=true end
+	local sg=Instance.new("ScreenGui");sg.Name="LiquidUI";sg.DisplayOrder=50000;sg.ResetOnSpawn=false;sg.Parent=player:WaitForChild("PlayerGui");self.ScreenGui=sg
+	UserInputService.InputBegan:Connect(function(i,gpe) if not gpe and i.KeyCode==self.ToggleKey then self.Opened=not self.Opened;sg.Enabled=self.Opened end end)
+	local m=Instance.new("Frame");m.Name="Main";m.Size=UDim2.new(0,650,0,500);m.Position=UDim2.new(0.5,-325,0.5,-250);applyGlassEffect(m,12,0.2,0.6);m.Parent=sg
+	local tb=Instance.new("Frame");tb.Size=UDim2.new(1,0,0,45);applyGlassEffect(tb,12,0.4,nil);tb.Parent=m
+	local tt=Instance.new("TextLabel");tt.Text=" "..title;tt.Size=UDim2.new(1,0,1,0);tt.BackgroundTransparency=1;tt.TextColor3=Library.Theme.Text;tt.Font=Enum.Font.GothamBold;tt.TextSize=18;tt.TextXAlignment=Enum.TextXAlignment.Left;tt.Parent=tb
+	-- Drag Logic (Topbar only)
+	local dr,ds,sp
+	tb.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then dr=true;ds=i.Position;sp=m.Position end end)
+	UserInputService.InputChanged:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseMovement and dr then local d=i.Position-ds;m.Position=UDim2.new(sp.X.Scale,sp.X.Offset+d.X,sp.Y.Scale,sp.Y.Offset+d.Y) end end)
+	UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then dr=false end end)
+	local ts=Instance.new("ScrollingFrame");ts.Size=UDim2.new(0,150,1,-55);ts.Position=UDim2.new(0,8,0,50);ts.BackgroundTransparency=1;ts.ScrollBarThickness=0;ts.Parent=m;Instance.new("UIListLayout",ts).Padding=UDim.new(0,5)
+	local pc=Instance.new("Frame");pc.Size=UDim2.new(1,-175,1,-55);pc.Position=UDim2.new(0,165,0,50);pc.BackgroundTransparency=1;pc.Parent=m
+	local w={CurrentTab=nil}
+	function w:CreateTab(n)
+		local tbb=Instance.new("TextButton");tbb.Size=UDim2.new(1,-5,0,40);tbb.Text=n;tbb.TextColor3=Library.Theme.Text;tbb.Font=Enum.Font.GothamSemibold;tbb.TextSize=14;applyGlassEffect(tbb,6,0.6,0.8);tbb.Parent=ts
+		local p=Instance.new("ScrollingFrame");p.Size=UDim2.new(1,0,1,0);p.Visible=false;p.BackgroundTransparency=1;p.ScrollBarThickness=2;p.ScrollBarImageColor3=Library.Theme.Accent;p.Parent=pc
+		local pl=Instance.new("UIListLayout");pl.Padding=UDim.new(0,8);pl.HorizontalAlignment=Enum.HorizontalAlignment.Center;pl.Parent=p
+		pl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() p.CanvasSize=UDim2.new(0,0,0,pl.AbsoluteContentSize.Y+20) end)
+		tbb.MouseButton1Click:Connect(function() for _,v in pairs(pc:GetChildren()) do v.Visible=false end;for _,b in pairs(ts:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3=Library.Theme.Background end end;p.Visible=true;tbb.BackgroundColor3=Library.Theme.Accent end)
+		if not w.CurrentTab then p.Visible=true;tbb.BackgroundColor3=Library.Theme.Accent;w.CurrentTab=n end
+		local e={}
+		function e:CreateLabel(txt) local l=Instance.new("TextLabel");l.Size=UDim2.new(1,-10,0,30);l.BackgroundTransparency=1;l.Text=" "..txt;l.Font=Enum.Font.GothamSemibold;l.TextColor3=Library.Theme.Text;l.TextSize=14;l.TextXAlignment=Enum.TextXAlignment.Left;l.Parent=p;return {Set=function(_,nt) l.Text=" "..nt end} end
+		function e:CreateButton(txt,cb) local b=Instance.new("TextButton");b.Size=UDim2.new(1,-10,0,45);b.Text=txt;b.Font=Enum.Font.Gotham;b.TextColor3=Library.Theme.Text;b.TextSize=14;applyGlassEffect(b,6,0.5,0.7);b.Parent=p;b.MouseButton1Click:Connect(cb) end
+		function e:CreateSlider(txt,f,mn,mx,df,cb)
+			local isInt=mn==math.floor(mn) and mx==math.floor(mx)
+			local function snapVal(v) if isInt then return math.floor(v+0.5) else return math.floor(v*100+0.5)/100 end end
+			Library.Flags[f]=snapVal(df or mn)
+			local sf=Instance.new("Frame");sf.Size=UDim2.new(1,-10,0,55);applyGlassEffect(sf,6,0.5,0.7);sf.Parent=p
+			local tl=Instance.new("TextLabel");tl.Size=UDim2.new(1,-20,0,25);tl.Position=UDim2.new(0,10,0,5);tl.BackgroundTransparency=1;tl.Text=txt;tl.Font=Enum.Font.Gotham;tl.TextColor3=Library.Theme.Text;tl.TextSize=14;tl.TextXAlignment=Enum.TextXAlignment.Left;tl.Parent=sf
+			local vl=Instance.new("TextLabel");vl.Size=UDim2.new(0,40,0,25);vl.Position=UDim2.new(1,-50,0,5);vl.BackgroundTransparency=1;vl.Text=tostring(Library.Flags[f]);vl.Font=Enum.Font.GothamBold;vl.TextColor3=Library.Theme.Accent;vl.TextSize=14;vl.TextXAlignment=Enum.TextXAlignment.Right;vl.Parent=sf
+			local sb=Instance.new("Frame");sb.Size=UDim2.new(1,-20,0,6);sb.Position=UDim2.new(0,10,0,38);sb.BackgroundColor3=Library.Theme.Secondary;sb.BorderSizePixel=0;sb.Parent=sf;Instance.new("UICorner",sb).CornerRadius=UDim.new(0,4)
+			local sfi=Instance.new("Frame");sfi.Size=UDim2.new((Library.Flags[f]-mn)/(mx-mn),0,1,0);sfi.BackgroundColor3=Library.Theme.Accent;sfi.BorderSizePixel=0;sfi.Parent=sb;Instance.new("UICorner",sfi).CornerRadius=UDim.new(0,4)
+			Library.Elements[f]={Type="Slider",Fill=sfi,ValLabel=vl,Min=mn,Max=mx}
+			local function mv() local pct=math.clamp((UserInputService:GetMouseLocation().X-sb.AbsolutePosition.X)/sb.AbsoluteSize.X,0,1);local val=snapVal(mn+(mx-mn)*pct);local snappedPct=(val-mn)/(mx-mn);Library.Flags[f]=val;sfi.Size=UDim2.new(snappedPct,0,1,0);vl.Text=tostring(val);if cb then cb(val) end end
+			sf.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then local mc;mc=UserInputService.InputChanged:Connect(function(ic) if ic.UserInputType==Enum.UserInputType.MouseMovement then mv() end end);mv();UserInputService.InputEnded:Connect(function(ie) if ie.UserInputType==Enum.UserInputType.MouseButton1 and mc then mc:Disconnect();mc=nil end end) end end)
 		end
-
-		task.wait(0.05)
+		function e:CreateTextBox(txt,f,df,cb)
+			Library.Flags[f]=df or ""
+			local bf=Instance.new("Frame");bf.Size=UDim2.new(1,-10,0,45);applyGlassEffect(bf,6,0.5,0.7);bf.Parent=p
+			local bx=Instance.new("TextBox");bx.Size=UDim2.new(1,-20,1,0);bx.Position=UDim2.new(0,10,0,0);bx.BackgroundTransparency=1;bx.Text=Library.Flags[f];bx.PlaceholderText=txt;bx.Font=Enum.Font.Gotham;bx.TextColor3=Library.Theme.Text;bx.TextSize=14;bx.TextXAlignment=Enum.TextXAlignment.Left;bx.Parent=bf
+			Library.Elements[f]={Type="TextBox",Box=bx}
+			bx.FocusLost:Connect(function() Library.Flags[f]=bx.Text;if cb then cb(bx.Text) end end)
+		end
+		function e:CreateTextBoxSend(txt,f,df,cb)
+			Library.Flags[f]=df or ""
+			local bf=Instance.new("Frame");bf.Size=UDim2.new(1,-10,0,45);applyGlassEffect(bf,6,0.5,0.7);bf.Parent=p
+			local bx=Instance.new("TextBox");bx.Size=UDim2.new(1,-95,1,0);bx.Position=UDim2.new(0,10,0,0);bx.BackgroundTransparency=1;bx.Text=Library.Flags[f];bx.PlaceholderText=txt;bx.ClearTextOnFocus=false;bx.Font=Enum.Font.Gotham;bx.TextColor3=Library.Theme.Text;bx.TextSize=14;bx.TextXAlignment=Enum.TextXAlignment.Left;bx.Parent=bf
+			local sbtn=Instance.new("TextButton");sbtn.Size=UDim2.new(0,75,0,32);sbtn.Position=UDim2.new(1,-82,0.5,-16);sbtn.Text="Enter";sbtn.Font=Enum.Font.GothamBold;sbtn.TextColor3=Library.Theme.Text;sbtn.TextSize=13;sbtn.BackgroundColor3=Library.Theme.Accent;applyGlassEffect(sbtn,4,0.1,nil);sbtn.Parent=bf
+			Library.Elements[f]={Type="TextBox",Box=bx}
+			local function send()
+				local content=bx.Text
+				if content=="" then return end
+				Library.Flags[f]=content
+				if cb then cb(content) end
+				bx.Text=""
+				Library.Flags[f]=""
+			end
+			sbtn.MouseButton1Click:Connect(send)
+			bx.FocusLost:Connect(function(enterPressed) if enterPressed then send() end end)
+		end
+		function e:CreateToggle(txt,f,df,cb)
+			Library.Flags[f]=df or false
+			local tg=Instance.new("TextButton");tg.Size=UDim2.new(1,-10,0,45);tg.Text=" "..txt;tg.Font=Enum.Font.Gotham;tg.TextColor3=Library.Theme.Text;tg.TextSize=14;tg.TextXAlignment=Enum.TextXAlignment.Left;applyGlassEffect(tg,6,0.5,0.7);tg.Parent=p
+			local ind=Instance.new("Frame");ind.Size=UDim2.new(0,24,0,24);ind.Position=UDim2.new(1,-34,0.5,-12);applyGlassEffect(ind,4,0.2,0.5);ind.BackgroundColor3=Library.Flags[f] and Library.Theme.Accent or Library.Theme.Secondary;ind.Parent=tg
+			Library.Elements[f]={Type="Toggle",Indicator=ind}
+			tg.MouseButton1Click:Connect(function() Library.Flags[f]=not Library.Flags[f];Library:Update(f);if cb then cb(Library.Flags[f]) end end)
+		end
+		function e:CreateKeybind(txt,f,df,cb)
+			local defaultName
+			if typeof(df)=="EnumItem" then defaultName=df.Name else defaultName=tostring(df) end
+			Library.Flags[f]=defaultName;local bnd=false
+			local bd=Instance.new("TextButton");bd.Size=UDim2.new(1,-10,0,45);bd.Text=" "..txt;bd.Font=Enum.Font.Gotham;bd.TextColor3=Library.Theme.Text;bd.TextSize=14;bd.TextXAlignment=Enum.TextXAlignment.Left;applyGlassEffect(bd,6,0.5,0.7);bd.Parent=p
+			local lb=Instance.new("TextLabel");lb.Size=UDim2.new(0,80,0,26);lb.Position=UDim2.new(1,-90,0.5,-13);lb.Text=Library.Flags[f];lb.Font=Enum.Font.GothamBold;lb.TextColor3=Library.Theme.Accent;applyGlassEffect(lb,4,0.3,0.5);lb.Parent=bd
+			Library.Elements[f]={Type="Keybind",Label=lb}
+			bd.MouseButton1Click:Connect(function() bnd=true;lb.Text="..." end)
+			-- supports Keyboard, MouseButton1, MouseButton2
+			UserInputService.InputBegan:Connect(function(i,gpe)
+				if bnd then
+					if i.UserInputType==Enum.UserInputType.Keyboard then
+						Library.Flags[f]=i.KeyCode.Name;Library:Update(f);bnd=false
+					elseif i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.MouseButton2 then
+						Library.Flags[f]=i.UserInputType.Name;Library:Update(f);bnd=false
+					end
+				else
+					if gpe then return end
+					if i.UserInputType==Enum.UserInputType.Keyboard and i.KeyCode.Name==Library.Flags[f] then
+						if cb then cb() end
+					elseif (i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.MouseButton2) and i.UserInputType.Name==Library.Flags[f] then
+						if cb then cb() end
+					end
+				end
+			end)
+		end
+		function e:CreateDropdown(txt,f,ls,cb)
+			Library.Flags[f]=ls[1];local ih=35
+			local dp=Instance.new("Frame");dp.Size=UDim2.new(1,-10,0,45);dp.ClipsDescendants=true;applyGlassEffect(dp,6,0.5,0.7);dp.Parent=p
+			local bt=Instance.new("TextButton");bt.Size=UDim2.new(1,0,0,45);bt.Text=" "..txt.." : "..Library.Flags[f];bt.Font=Enum.Font.Gotham;bt.TextColor3=Library.Theme.Text;bt.TextSize=14;bt.BackgroundTransparency=1;bt.TextXAlignment=Enum.TextXAlignment.Left;bt.Parent=dp
+			local ct=Instance.new("Frame");ct.Size=UDim2.new(1,0,0,#ls*ih);ct.Position=UDim2.new(0,0,0,45);ct.BackgroundTransparency=1;ct.Parent=dp;Instance.new("UIListLayout",ct)
+			Library.Elements[f]={Type="Dropdown",Button=bt,Title=txt};local op=false
+			bt.MouseButton1Click:Connect(function() op=not op;dp.Size=op and UDim2.new(1,-10,0,45+(#ls*ih)) or UDim2.new(1,-10,0,45);p.CanvasSize=UDim2.new(0,0,0,pl.AbsoluteContentSize.Y+20) end)
+			for _,v in pairs(ls) do local it=Instance.new("TextButton");it.Size=UDim2.new(1,0,0,ih);it.Text=v;it.Font=Enum.Font.Gotham;it.TextColor3=Color3.fromRGB(180,180,180);it.BackgroundTransparency=1;it.Parent=ct;it.MouseButton1Click:Connect(function() Library.Flags[f]=v;Library:Update(f);op=false;dp.Size=UDim2.new(1,-10,0,45);if cb then cb(v) end end) end
+		end
+		return e
 	end
-end
-
-for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-	if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-		task.spawn(fireRemote, obj)
+	function w:CreateConfigTab()
+		local t=self:CreateTab("Settings")
+		t:CreateTextBox("Config Name...","ConfigName","DefaultConfig")
+		t:CreateButton("Save Config",function() Library:SaveConfig(Library.Flags["ConfigName"]) end)
+		t:CreateButton("Load Config",function() Library:LoadConfig(Library.Flags["ConfigName"]) end)
+		t:CreateButton("Destroy UI",function() Library:UIDelete() end)
 	end
+	if settingsEnabled then w:CreateConfigTab() end
+	return w
 end
+return Library
