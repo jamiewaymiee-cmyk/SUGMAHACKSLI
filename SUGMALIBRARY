@@ -251,4 +251,165 @@ function Library:CreateWindow(cfg)
 			bx.PlaceholderText=txt
 			bx.Font=Enum.Font.Code
 			bx.TextColor3=Library.Theme.Text
-			bx.
+			bx.TextSize=12
+			bx.TextXAlignment=Enum.TextXAlignment.Left
+			bx.Parent=bf
+			Library.Elements[f]={Type="TextBox",Box=bx}
+			bx.FocusLost:Connect(function() Library.Flags[f]=bx.Text;if cb then cb(bx.Text) end end)
+		end
+		function e:CreateTextBoxSend(txt, f, df, cb, order)
+			Library.Flags[f]=df or ""
+			local bf=Instance.new("Frame")
+			bf.Size=UDim2.new(1,-4,0,32)
+			bf.LayoutOrder=resolveOrder(order)
+			applyBoxStyle(bf,2,nil,Color3.fromRGB(22,22,22))
+			bf.Parent=p
+			local bx=Instance.new("TextBox")
+			bx.Size=UDim2.new(1,-70,1,0)
+			bx.Position=UDim2.new(0,6,0,0)
+			bx.BackgroundTransparency=1
+			bx.Text=Library.Flags[f]
+			bx.PlaceholderText=txt
+			bx.ClearTextOnFocus=false
+			bx.Font=Enum.Font.Code
+			bx.TextColor3=Library.Theme.Text
+			bx.TextSize=12
+			bx.TextXAlignment=Enum.TextXAlignment.Left
+			bx.Parent=bf
+			local sbtn=Instance.new("TextButton")
+			sbtn.Size=UDim2.new(0,55,0,22)
+			sbtn.Position=UDim2.new(1,-60,0.5,-11)
+			sbtn.Text="SEND"
+			sbtn.Font=Enum.Font.Code
+			sbtn.TextColor3=Library.Theme.Text
+			sbtn.TextSize=11
+			applyBoxStyle(sbtn,2,nil,Library.Theme.Background)
+			sbtn.Parent=bf
+			Library.Elements[f]={Type="TextBox",Box=bx}
+			local function send()
+				local content=bx.Text
+				if content=="" then return end
+				Library.Flags[f]=content
+				if cb then cb(content) end
+				bx.Text=""
+				Library.Flags[f]=""
+			end
+			sbtn.MouseButton1Click:Connect(send)
+			bx.FocusLost:Connect(function(enterPressed) if enterPressed then send() end end)
+		end
+		function e:CreateToggle(txt, f, df, cb, order)
+			Library.Flags[f]=df or false
+			local tg=Instance.new("TextButton")
+			tg.Size=UDim2.new(1,-4,0,32)
+			tg.Text=" "..txt
+			tg.Font=Enum.Font.Code
+			tg.TextColor3=Library.Theme.Text
+			tg.TextSize=12
+			tg.TextXAlignment=Enum.TextXAlignment.Left
+			tg.LayoutOrder=resolveOrder(order)
+			applyBoxStyle(tg,2,nil,Color3.fromRGB(22,22,22))
+			tg.Parent=p
+			local ind=Instance.new("Frame")
+			ind.Size=UDim2.new(0,16,0,16)
+			ind.Position=UDim2.new(1,-24,0.5,-8)
+			applyBoxStyle(ind,2,nil,Library.Theme.Background)
+			ind.BackgroundColor3=Library.Flags[f] and Library.Theme.Accent or Library.Theme.Secondary
+			ind.Parent=tg
+			Library.Elements[f]={Type="Toggle",Indicator=ind}
+			tg.MouseButton1Click:Connect(function() Library.Flags[f]=not Library.Flags[f];Library:Update(f);if cb then cb(Library.Flags[f]) end end)
+		end
+		function e:CreateKeybind(txt, f, df, cb, order)
+			local defaultName
+			if typeof(df)=="EnumItem" then defaultName=df.Name else defaultName=tostring(df) end
+			Library.Flags[f]=defaultName
+			local bnd=false
+			local bd=Instance.new("TextButton")
+			bd.Size=UDim2.new(1,-4,0,32)
+			bd.Text=" "..txt
+			bd.Font=Enum.Font.Code
+			bd.TextColor3=Library.Theme.Text
+			bd.TextSize=12
+			bd.TextXAlignment=Enum.TextXAlignment.Left
+			bd.LayoutOrder=resolveOrder(order)
+			applyBoxStyle(bd,2,nil,Color3.fromRGB(22,22,22))
+			bd.Parent=p
+			local lb=Instance.new("TextLabel")
+			lb.Size=UDim2.new(0,70,0,20)
+			lb.Position=UDim2.new(1,-76,0.5,-10)
+			lb.Text=Library.Flags[f]
+			lb.Font=Enum.Font.Code
+			lb.TextColor3=Library.Theme.Accent
+			lb.TextSize=11
+			applyBoxStyle(lb,2,nil,Library.Theme.Background)
+			lb.Parent=bd
+			Library.Elements[f]={Type="Keybind",Label=lb}
+			bd.MouseButton1Click:Connect(function() bnd=true;lb.Text="..." end)
+			UserInputService.InputBegan:Connect(function(i,gpe)
+				if bnd then
+					if i.UserInputType==Enum.UserInputType.Keyboard then
+						Library.Flags[f]=i.KeyCode.Name;Library:Update(f);bnd=false
+					elseif i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.MouseButton2 then
+						Library.Flags[f]=i.UserInputType.Name;Library:Update(f);bnd=false
+					end
+				else
+					if gpe then return end
+					if i.UserInputType==Enum.UserInputType.Keyboard and i.KeyCode.Name==Library.Flags[f] then
+						if cb then cb() end
+					elseif (i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.MouseButton2) and i.UserInputType.Name==Library.Flags[f] then
+						if cb then cb() end
+					end
+				end
+			end)
+		end
+		function e:CreateDropdown(txt, f, ls, cb, order)
+			Library.Flags[f]=ls[1]
+			local ih=28
+			local dp=Instance.new("Frame")
+			dp.Size=UDim2.new(1,-4,0,32)
+			dp.ClipsDescendants=true
+			dp.LayoutOrder=resolveOrder(order)
+			applyBoxStyle(dp,2,nil,Color3.fromRGB(22,22,22))
+			dp.Parent=p
+			local bt=Instance.new("TextButton")
+			bt.Size=UDim2.new(1,0,0,32)
+			bt.Text=" "..txt.." : "..Library.Flags[f]
+			bt.Font=Enum.Font.Code
+			bt.TextColor3=Library.Theme.Text
+			bt.TextSize=12
+			bt.BackgroundTransparency=1
+			bt.TextXAlignment=Enum.TextXAlignment.Left
+			bt.Parent=dp
+			local ct=Instance.new("Frame")
+			ct.Size=UDim2.new(1,0,0,#ls*ih)
+			ct.Position=UDim2.new(0,0,0,32)
+			ct.BackgroundTransparency=1
+			ct.Parent=dp
+			Instance.new("UIListLayout",ct)
+			Library.Elements[f]={Type="Dropdown",Button=bt,Title=txt}
+			local op=false
+			bt.MouseButton1Click:Connect(function() op=not op;dp.Size=op and UDim2.new(1,-4,0,32+(#ls*ih)) or UDim2.new(1,-4,0,32);p.CanvasSize=UDim2.new(0,0,0,pl.AbsoluteContentSize.Y+10) end)
+			for _,v in pairs(ls) do
+				local it=Instance.new("TextButton")
+				it.Size=UDim2.new(1,0,0,ih)
+				it.Text="  "..v
+				it.Font=Enum.Font.Code
+				it.TextColor3=Color3.fromRGB(170,170,170)
+				it.BackgroundTransparency=1
+				it.TextXAlignment=Enum.TextXAlignment.Left
+				it.Parent=ct
+				it.MouseButton1Click:Connect(function() Library.Flags[f]=v;Library:Update(f);op=false;dp.Size=UDim2.new(1,-4,0,32);if cb then cb(v) end end)
+			end
+		end
+		return e
+	end
+	function w:CreateConfigTab()
+		local t=self:CreateTab("Settings")
+		t:CreateTextBox("Config Name...","ConfigName","DefaultConfig")
+		t:CreateButton("Save Config",function() Library:SaveConfig(Library.Flags["ConfigName"]) end)
+		t:CreateButton("Load Config",function() Library:LoadConfig(Library.Flags["ConfigName"]) end)
+		t:CreateButton("Destroy UI",function() Library:UIDelete() end)
+	end
+	if settingsEnabled then w:CreateConfigTab() end
+	return w
+end
+return Library
