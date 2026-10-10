@@ -1,8 +1,8 @@
-local Library={Flags={},Elements={},Theme={Accent=Color3.fromRGB(200,200,200),Background=Color3.fromRGB(16,16,16),Text=Color3.fromRGB(230,230,230),Secondary=Color3.fromRGB(40,40,40)},ToggleKey=Enum.KeyCode.RightShift,Opened=true,Notifications=nil}
+local Library={Flags={},Elements={},Theme={Accent=Color3.fromRGB(95,145,255),Background=Color3.fromRGB(14,14,18),Element=Color3.fromRGB(24,24,32),Secondary=Color3.fromRGB(50,50,66),Text=Color3.fromRGB(240,240,240)},ToggleKey=Enum.KeyCode.RightShift,Opened=true,Notifications=nil}
 local UserInputService,HttpService,TweenService,Players=game:GetService("UserInputService"),game:GetService("HttpService"),game:GetService("TweenService"),game:GetService("Players")
 local player=Players.LocalPlayer
-local function applyBoxStyle(g,r,st)
-	g.BackgroundColor3=Library.Theme.Background
+local function applyBoxStyle(g,r,bg,st)
+	g.BackgroundColor3=bg or Library.Theme.Element
 	g.BackgroundTransparency=0
 	g.BorderSizePixel=0
 	if r and r>0 then
@@ -47,7 +47,7 @@ function Library:Notify(t,c,d)
 	local no=Instance.new("Frame")
 	no.Size=UDim2.new(1,0,0,80)
 	no.ClipsDescendants=true
-	applyBoxStyle(no,2)
+	applyBoxStyle(no,3,Library.Theme.Element,Library.Theme.Accent)
 	no.Parent=self.Notifications
 	local tl=Instance.new("TextLabel")
 	tl.Size=UDim2.new(1,-10,0,25)
@@ -93,7 +93,7 @@ function Library:CreateWindow(cfg)
 	if type(cfg)=="table" then title=cfg.Title or "Library";settingsEnabled=(cfg.Settings==nil) and true or cfg.Settings
 	else title=cfg or "Library";settingsEnabled=true end
 	local sg=Instance.new("ScreenGui")
-	sg.Name="UtilitarianUI"
+	sg.Name="LayeredUtilitarianUI"
 	sg.DisplayOrder=50000
 	sg.ResetOnSpawn=false
 	sg.Parent=player:WaitForChild("PlayerGui")
@@ -101,16 +101,16 @@ function Library:CreateWindow(cfg)
 	UserInputService.InputBegan:Connect(function(i,gpe) if not gpe and i.KeyCode==self.ToggleKey then self.Opened=not self.Opened;sg.Enabled=self.Opened end end)
 	local m=Instance.new("Frame")
 	m.Name="Main"
-	m.Size=UDim2.new(0,620,0,460)
-	m.Position=UDim2.new(0.5,-310,0.5,-230)
-	applyBoxStyle(m,2)
+	m.Size=UDim2.new(0,640,0,480)
+	m.Position=UDim2.new(0.5,-320,0.5,-240)
+	applyBoxStyle(m,3,Library.Theme.Background,Library.Theme.Secondary)
 	m.Parent=sg
 	local tb=Instance.new("Frame")
-	tb.Size=UDim2.new(1,0,0,32)
-	applyBoxStyle(tb,2)
+	tb.Size=UDim2.new(1,0,0,36)
+	applyBoxStyle(tb,0,Library.Theme.Element,Library.Theme.Secondary)
 	tb.Parent=m
 	local tt=Instance.new("TextLabel")
-	tt.Text=" "..title
+	tt.Text="  "..title
 	tt.Size=UDim2.new(1,0,1,0)
 	tt.BackgroundTransparency=1
 	tt.TextColor3=Library.Theme.Text
@@ -123,27 +123,27 @@ function Library:CreateWindow(cfg)
 	UserInputService.InputChanged:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseMovement and dr then local d=i.Position-ds;m.Position=UDim2.new(sp.X.Scale,sp.X.Offset+d.X,sp.Y.Scale,sp.Y.Offset+d.Y) end end)
 	UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 then dr=false end end)
 	local ts=Instance.new("ScrollingFrame")
-	ts.Size=UDim2.new(0,140,1,-40)
-	ts.Position=UDim2.new(0,4,0,36)
+	ts.Size=UDim2.new(0,150,1,-46)
+	ts.Position=UDim2.new(0,5,0,41)
 	ts.BackgroundTransparency=1
 	ts.ScrollBarThickness=0
 	ts.Parent=m
-	Instance.new("UIListLayout",ts).Padding=UDim.new(0,3)
+	Instance.new("UIListLayout",ts).Padding=UDim.new(0,4)
 	local pc=Instance.new("Frame")
-	pc.Size=UDim2.new(1,-152,1,-40)
-	pc.Position=UDim2.new(0,148,0,36)
-	pc.BackgroundTransparency=1
+	pc.Size=UDim2.new(1,-162,1,-46)
+	pc.Position=UDim2.new(0,157,0,41)
+	applyBoxStyle(pc,3,Library.Theme.Background,Library.Theme.Secondary)
 	pc.Parent=m
 	local w={CurrentTab=nil}
 	function w:CreateTab(n)
 		local tbb=Instance.new("TextButton")
-		tbb.Size=UDim2.new(1,0,0,30)
-		tbb.Text=" "..n
+		tbb.Size=UDim2.new(1,0,0,32)
+		tbb.Text="  "..n
 		tbb.TextColor3=Library.Theme.Text
 		tbb.Font=Enum.Font.Code
 		tbb.TextSize=12
 		tbb.TextXAlignment=Enum.TextXAlignment.Left
-		applyBoxStyle(tbb,2)
+		applyBoxStyle(tbb,3,Library.Theme.Element,Library.Theme.Secondary)
 		tbb.Parent=ts
 		local p=Instance.new("ScrollingFrame")
 		p.Size=UDim2.new(1,0,1,0)
@@ -153,12 +153,12 @@ function Library:CreateWindow(cfg)
 		p.ScrollBarImageColor3=Library.Theme.Accent
 		p.Parent=pc
 		local pl=Instance.new("UIListLayout")
-		pl.Padding=UDim.new(0,4)
+		pl.Padding=UDim.new(0,6)
 		pl.HorizontalAlignment=Enum.HorizontalAlignment.Center
 		pl.Parent=p
-		pl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() p.CanvasSize=UDim2.new(0,0,0,pl.AbsoluteContentSize.Y+10) end)
-		tbb.MouseButton1Click:Connect(function() for _,v in pairs(pc:GetChildren()) do v.Visible=false end;for _,b in pairs(ts:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3=Library.Theme.Background end end;p.Visible=true;tbb.BackgroundColor3=Library.Theme.Secondary end)
-		if not w.CurrentTab then p.Visible=true;tbb.BackgroundColor3=Library.Theme.Secondary;w.CurrentTab=n end
+		pl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() p.CanvasSize=UDim2.new(0,0,0,pl.AbsoluteContentSize.Y+12) end)
+		tbb.MouseButton1Click:Connect(function() for _,v in pairs(pc:GetChildren()) do if v:IsA("ScrollingFrame") then v.Visible=false end end;for _,b in pairs(ts:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3=Library.Theme.Element;b.UIStroke.Color=Library.Theme.Secondary end end;p.Visible=true;tbb.BackgroundColor3=Library.Theme.Secondary;tbb.UIStroke.Color=Library.Theme.Accent end)
+		if not w.CurrentTab then p.Visible=true;tbb.BackgroundColor3=Library.Theme.Secondary;tbb.UIStroke.Color=Library.Theme.Accent;w.CurrentTab=n end
 		local e={}
 		local orderCounter = 0
 		local function resolveOrder(order)
@@ -168,27 +168,27 @@ function Library:CreateWindow(cfg)
 		end
 		function e:CreateLabel(txt, order)
 			local l=Instance.new("TextLabel")
-			l.Size=UDim2.new(1,-4,0,24)
+			l.Size=UDim2.new(1,-12,0,26)
 			l.BackgroundTransparency=1
-			l.Text=" "..txt
+			l.Text="  "..txt
 			l.Font=Enum.Font.Code
 			l.TextColor3=Library.Theme.Text
 			l.TextSize=12
 			l.TextXAlignment=Enum.TextXAlignment.Left
 			l.LayoutOrder=resolveOrder(order)
 			l.Parent=p
-			return {Set=function(_,nt) l.Text=" "..nt end}
+			return {Set=function(_,nt) l.Text="  "..nt end}
 		end
 		function e:CreateButton(txt, cb, order)
 			local b=Instance.new("TextButton")
-			b.Size=UDim2.new(1,-4,0,32)
-			b.Text=" "..txt
+			b.Size=UDim2.new(1,-12,0,34)
+			b.Text="  "..txt
 			b.Font=Enum.Font.Code
 			b.TextColor3=Library.Theme.Text
 			b.TextSize=12
 			b.TextXAlignment=Enum.TextXAlignment.Left
 			b.LayoutOrder=resolveOrder(order)
-			applyBoxStyle(b,2)
+			applyBoxStyle(b,3,Library.Theme.Element,Library.Theme.Secondary)
 			b.Parent=p
 			b.MouseButton1Click:Connect(cb)
 		end
@@ -197,15 +197,15 @@ function Library:CreateWindow(cfg)
 			local function snapVal(v) if isInt then return math.floor(v+0.5) else return math.floor(v*100+0.5)/100 end end
 			Library.Flags[f]=snapVal(df or mn)
 			local sf=Instance.new("Frame")
-			sf.Size=UDim2.new(1,-4,0,42)
+			sf.Size=UDim2.new(1,-12,0,46)
 			sf.LayoutOrder=resolveOrder(order)
-			applyBoxStyle(sf,2)
+			applyBoxStyle(sf,3,Library.Theme.Element,Library.Theme.Secondary)
 			sf.Parent=p
 			local tl=Instance.new("TextLabel")
-			tl.Size=UDim2.new(1,-10,0,20)
-			tl.Position=UDim2.new(0,6,0,2)
+			tl.Size=UDim2.new(1,-16,0,20)
+			tl.Position=UDim2.new(0,8,0,3)
 			tl.BackgroundTransparency=1
-			tl.Text=" "..txt
+			tl.Text="  "..txt
 			tl.Font=Enum.Font.Code
 			tl.TextColor3=Library.Theme.Text
 			tl.TextSize=12
@@ -213,7 +213,7 @@ function Library:CreateWindow(cfg)
 			tl.Parent=sf
 			local vl=Instance.new("TextLabel")
 			vl.Size=UDim2.new(0,50,0,20)
-			vl.Position=UDim2.new(1,-56,0,2)
+			vl.Position=UDim2.new(1,-58,0,3)
 			vl.BackgroundTransparency=1
 			vl.Text=tostring(Library.Flags[f])
 			vl.Font=Enum.Font.Code
@@ -222,11 +222,11 @@ function Library:CreateWindow(cfg)
 			vl.TextXAlignment=Enum.TextXAlignment.Right
 			vl.Parent=sf
 			local sb=Instance.new("Frame")
-			sb.Size=UDim2.new(1,-12,0,4)
-			sb.Position=UDim2.new(0,6,0,28)
-			sb.BackgroundColor3=Library.Theme.Secondary
+			sb.Size=UDim2.new(1,-16,0,6)
+			sb.Position=UDim2.new(0,8,0,30)
+			sb.BackgroundColor3=Library.Theme.Background
 			sb.BorderSizePixel=0
-			sb.Parent=sf
+			sb.Parent=sb and sf or sf
 			local sfi=Instance.new("Frame")
 			sfi.Size=UDim2.new((Library.Flags[f]-mn)/(mx-mn),0,1,0)
 			sfi.BackgroundColor3=Library.Theme.Accent
@@ -239,13 +239,13 @@ function Library:CreateWindow(cfg)
 		function e:CreateTextBox(txt, f, df, cb, order)
 			Library.Flags[f]=df or ""
 			local bf=Instance.new("Frame")
-			bf.Size=UDim2.new(1,-4,0,32)
+			bf.Size=UDim2.new(1,-12,0,34)
 			bf.LayoutOrder=resolveOrder(order)
-			applyBoxStyle(bf,2)
+			applyBoxStyle(bf,3,Library.Theme.Element,Library.Theme.Secondary)
 			bf.Parent=p
 			local bx=Instance.new("TextBox")
-			bx.Size=UDim2.new(1,-10,1,0)
-			bx.Position=UDim2.new(0,6,0,0)
+			bx.Size=UDim2.new(1,-16,1,0)
+			bx.Position=UDim2.new(0,8,0,0)
 			bx.BackgroundTransparency=1
 			bx.Text=Library.Flags[f]
 			bx.PlaceholderText=txt
@@ -260,13 +260,13 @@ function Library:CreateWindow(cfg)
 		function e:CreateTextBoxSend(txt, f, df, cb, order)
 			Library.Flags[f]=df or ""
 			local bf=Instance.new("Frame")
-			bf.Size=UDim2.new(1,-4,0,32)
+			bf.Size=UDim2.new(1,-12,0,34)
 			bf.LayoutOrder=resolveOrder(order)
-			applyBoxStyle(bf,2)
+			applyBoxStyle(bf,3,Library.Theme.Element,Library.Theme.Secondary)
 			bf.Parent=p
 			local bx=Instance.new("TextBox")
-			bx.Size=UDim2.new(1,-70,1,0)
-			bx.Position=UDim2.new(0,6,0,0)
+			bx.Size=UDim2.new(1,-74,1,0)
+			bx.Position=UDim2.new(0,8,0,0)
 			bx.BackgroundTransparency=1
 			bx.Text=Library.Flags[f]
 			bx.PlaceholderText=txt
@@ -277,14 +277,13 @@ function Library:CreateWindow(cfg)
 			bx.TextXAlignment=Enum.TextXAlignment.Left
 			bx.Parent=bf
 			local sbtn=Instance.new("TextButton")
-			sbtn.Size=UDim2.new(0,55,0,22)
-			sbtn.Position=UDim2.new(1,-60,0.5,-11)
+			sbtn.Size=UDim2.new(0,55,0,24)
+			sbtn.Position=UDim2.new(1,-63,0.5,-12)
 			sbtn.Text="SEND"
 			sbtn.Font=Enum.Font.Code
 			sbtn.TextColor3=Library.Theme.Text
 			sbtn.TextSize=11
-			sbtn.BackgroundColor3=Library.Theme.Secondary
-			applyBoxStyle(sbtn,2)
+			applyBoxStyle(sbtn,2,Library.Theme.Background,Library.Theme.Secondary)
 			sbtn.Parent=bf
 			Library.Elements[f]={Type="TextBox",Box=bx}
 			local function send()
@@ -301,20 +300,20 @@ function Library:CreateWindow(cfg)
 		function e:CreateToggle(txt, f, df, cb, order)
 			Library.Flags[f]=df or false
 			local tg=Instance.new("TextButton")
-			tg.Size=UDim2.new(1,-4,0,32)
-			tg.Text=" "..txt
+			tg.Size=UDim2.new(1,-12,0,34)
+			tg.Text="  "..txt
 			tg.Font=Enum.Font.Code
 			tg.TextColor3=Library.Theme.Text
 			tg.TextSize=12
 			tg.TextXAlignment=Enum.TextXAlignment.Left
 			tg.LayoutOrder=resolveOrder(order)
-			applyBoxStyle(tg,2)
+			applyBoxStyle(tg,3,Library.Theme.Element,Library.Theme.Secondary)
 			tg.Parent=p
 			local ind=Instance.new("Frame")
-			ind.Size=UDim2.new(0,16,0,16)
-			ind.Position=UDim2.new(1,-24,0.5,-8)
-			applyBoxStyle(ind,2)
-			ind.BackgroundColor3=Library.Flags[f] and Library.Theme.Accent or Library.Theme.Secondary
+			ind.Size=UDim2.new(0,18,0,18)
+			ind.Position=UDim2.new(1,-27,0.5,-9)
+			applyBoxStyle(ind,2,Library.Theme.Background,Library.Theme.Secondary)
+			ind.BackgroundColor3=Library.Flags[f] and Library.Theme.Accent or Library.Theme.Background
 			ind.Parent=tg
 			Library.Elements[f]={Type="Toggle",Indicator=ind}
 			tg.MouseButton1Click:Connect(function() Library.Flags[f]=not Library.Flags[f];Library:Update(f);if cb then cb(Library.Flags[f]) end end)
@@ -325,23 +324,23 @@ function Library:CreateWindow(cfg)
 			Library.Flags[f]=defaultName
 			local bnd=false
 			local bd=Instance.new("TextButton")
-			bd.Size=UDim2.new(1,-4,0,32)
-			bd.Text=" "..txt
+			bd.Size=UDim2.new(1,-12,0,34)
+			bd.Text="  "..txt
 			bd.Font=Enum.Font.Code
 			bd.TextColor3=Library.Theme.Text
 			bd.TextSize=12
 			bd.TextXAlignment=Enum.TextXAlignment.Left
 			bd.LayoutOrder=resolveOrder(order)
-			applyBoxStyle(bd,2)
+			applyBoxStyle(bd,3,Library.Theme.Element,Library.Theme.Secondary)
 			bd.Parent=p
 			local lb=Instance.new("TextLabel")
-			lb.Size=UDim2.new(0,70,0,20)
-			lb.Position=UDim2.new(1,-76,0.5,-10)
+			lb.Size=UDim2.new(0,72,0,20)
+			lb.Position=UDim2.new(1,-81,0.5,-10)
 			lb.Text=Library.Flags[f]
 			lb.Font=Enum.Font.Code
 			lb.TextColor3=Library.Theme.Accent
 			lb.TextSize=11
-			applyBoxStyle(lb,2)
+			applyBoxStyle(lb,2,Library.Theme.Background,Library.Theme.Secondary)
 			lb.Parent=bd
 			Library.Elements[f]={Type="Keybind",Label=lb}
 			bd.MouseButton1Click:Connect(function() bnd=true;lb.Text="..." end)
@@ -364,16 +363,16 @@ function Library:CreateWindow(cfg)
 		end
 		function e:CreateDropdown(txt, f, ls, cb, order)
 			Library.Flags[f]=ls[1]
-			local ih=28
+			local ih=30
 			local dp=Instance.new("Frame")
-			dp.Size=UDim2.new(1,-4,0,32)
+			dp.Size=UDim2.new(1,-12,0,34)
 			dp.ClipsDescendants=true
 			dp.LayoutOrder=resolveOrder(order)
-			applyBoxStyle(dp,2)
+			applyBoxStyle(dp,3,Library.Theme.Element,Library.Theme.Secondary)
 			dp.Parent=p
 			local bt=Instance.new("TextButton")
-			bt.Size=UDim2.new(1,0,0,32)
-			bt.Text=" "..txt.." : "..Library.Flags[f]
+			bt.Size=UDim2.new(1,0,0,34)
+			bt.Text="  "..txt.." : "..Library.Flags[f]
 			bt.Font=Enum.Font.Code
 			bt.TextColor3=Library.Theme.Text
 			bt.TextSize=12
@@ -382,23 +381,23 @@ function Library:CreateWindow(cfg)
 			bt.Parent=dp
 			local ct=Instance.new("Frame")
 			ct.Size=UDim2.new(1,0,0,#ls*ih)
-			ct.Position=UDim2.new(0,0,0,32)
+			ct.Position=UDim2.new(0,0,0,34)
 			ct.BackgroundTransparency=1
 			ct.Parent=dp
 			Instance.new("UIListLayout",ct)
 			Library.Elements[f]={Type="Dropdown",Button=bt,Title=txt}
 			local op=false
-			bt.MouseButton1Click:Connect(function() op=not op;dp.Size=op and UDim2.new(1,-4,0,32+(#ls*ih)) or UDim2.new(1,-4,0,32);p.CanvasSize=UDim2.new(0,0,0,pl.AbsoluteContentSize.Y+10) end)
+			bt.MouseButton1Click:Connect(function() op=not op;dp.Size=op and UDim2.new(1,-12,0,34+(#ls*ih)) or UDim2.new(1,-12,0,34);p.CanvasSize=UDim2.new(0,0,0,pl.AbsoluteContentSize.Y+12) end)
 			for _,v in pairs(ls) do
 				local it=Instance.new("TextButton")
 				it.Size=UDim2.new(1,0,0,ih)
-				it.Text="  "..v
+				it.Text="    "..v
 				it.Font=Enum.Font.Code
-				it.TextColor3=Color3.fromRGB(170,170,170)
+				it.TextColor3=Color3.fromRGB(180,180,195)
 				it.BackgroundTransparency=1
 				it.TextXAlignment=Enum.TextXAlignment.Left
 				it.Parent=ct
-				it.MouseButton1Click:Connect(function() Library.Flags[f]=v;Library:Update(f);op=false;dp.Size=UDim2.new(1,-4,0,32);if cb then cb(v) end end)
+				it.MouseButton1Click:Connect(function() Library.Flags[f]=v;Library:Update(f);op=false;dp.Size=UDim2.new(1,-12,0,34);if cb then cb(v) end end)
 			end
 		end
 		return e
